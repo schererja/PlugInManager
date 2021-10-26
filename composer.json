@@ -1,0 +1,21 @@
+{
+    "name": "eden/slab-manager",
+    "autoload": {
+        "psr-4": {
+            "Eden\\SlabManager\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Eden\\SlabManager\\SlabManagerServiceProvider"
+            ]
+        },
+        "authors": [
+            {
+                "name": "Jason Scherer",
+                "email": "schereja@gmail.com"
+            }
+        ]
+    }
+}
