@@ -12,13 +12,13 @@ This package is used as a plugin style manager for a Laravel project.  This is o
 You can install the package via composer:
 
 ```bash
-composer require eden/slab-manager
+composer require eden/plugin-manager
 ```
 
 Also add to providers the following:
 
 ```php
- Eden\SlabManager\SlabManagerServiceProvider::class,
+ Eden\SlabManager\PluginManagerServiceProvider::class,
 
 ```
 ## Usage
@@ -45,6 +45,7 @@ The TestPlugin class must extend the Eden\SlabManager\Slab class, containing a u
 In the boot() method of your plugin call `$this->enableViews()`.
 Optional you can pass a relative path to the views directory, default to `views`.
 Views automatically have a namespace (`"plugin:{name}"`), the name is defined by the the main plugin class in a camel case format, with `Plugin` stripped from the end. For the example above it would be `plugin:test`.
+
 To render a view you can either write the namespace yourself or use the helper method `view()` in the plugin class. For example `view('plugin:test::some.view.name');`
 
 ### Routes

@@ -1,27 +1,28 @@
 <?php
 
-namespace Eden\SlabManager;
+namespace Eden\PlugInManager;
 
 use Illuminate\Support\ServiceProvider;
 
-class SlabManagerServiceProvider extends ServiceProvider
+class PluginManagerServiceProvider extends ServiceProvider
 {
     /**
      * Bootstrap the application services.
      */
     public function boot()
     {
+        PluginManager::getInstance($this->app);
         /*
          * Optional methods to load your package assets
          */
         // $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'slab-manager');
         // $this->loadViewsFrom(__DIR__.'/../resources/views', 'slab-manager');
         // $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
-        $this->loadRoutesFrom(__DIR__.'/SlabManagerRoutes.php');
+        $this->loadRoutesFrom(__DIR__ . '/PluginManagerRoutes.php');
 
         if ($this->app->runningInConsole()) {
             $this->publishes([
-                __DIR__.'/../config/config.php' => config_path('slab-manager.php'),
+                __DIR__.'/../config/config.php' => config_path('plugin-manager.php'),
             ], 'config');
 
             // Publishing the views.
@@ -51,11 +52,11 @@ class SlabManagerServiceProvider extends ServiceProvider
     public function register()
     {
         // Automatically apply the package configuration
-        $this->mergeConfigFrom(__DIR__.'/../config/config.php', 'slab-manager');
+        $this->mergeConfigFrom(__DIR__ . '/../config/config.php', 'plugin-manager');
 
         // Register the main class to use with the facade
-        $this->app->singleton('slab-manager', function () {
-            return new SlabManager;
+        $this->app->singleton('plugin-manager', function ($app) {
+            return PluginManager::getInstance($app);
         });
     }
 }

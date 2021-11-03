@@ -1,14 +1,14 @@
 {
-    "name": "eden/slab-manager",
+    "name": "eden/plugin-manager",
     "autoload": {
         "psr-4": {
-            "Eden\\SlabManager\\": "src/"
+            "Eden\\PlugInManager\\": "src/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "Eden\\SlabManager\\SlabManagerServiceProvider"
+                "Eden\\PlugInManager\\PluginManagerServiceProvider"
             ]
         },
         "authors": [

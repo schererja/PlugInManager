@@ -1,12 +1,12 @@
 <?php
 
-namespace Eden\SlabManager;
+namespace Eden\PlugInManager;
 
 
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Str;
 
-abstract class Slab
+abstract class Plugin
 {
     protected $app;
 
@@ -16,7 +16,7 @@ abstract class Slab
      * @var string
      */
     public $name;
-
+    public $uuid;
     public $description;
 
     public $version;
@@ -27,7 +27,9 @@ abstract class Slab
     {
         $this->app = $app;
 
+
         $this->checkPluginName();
+
     }
 
     abstract public function boot();
@@ -35,13 +37,13 @@ abstract class Slab
     private function checkPluginName()
     {
         if (!$this->name) {
-            throw new \InvalidArgumentException('Missing Slab Name, please verify name exists');
+            throw new \InvalidArgumentException('Missing Plugin Name, please verify name exists');
         }
     }
 
     private function getViewNamespace(): string
     {
-        return 'slab:' . Str::camel(
+        return 'Plugin:' . Str::camel(
                 mb_substr(
                     get_called_class(),
                     strpos(get_called_class(), '\\') + 1,
@@ -54,7 +56,7 @@ abstract class Slab
     {
         $this->app['view']->addNamespace(
             $this->getViewNamespace(),
-            $this->getSlabPath() . DIRECTORY_SEPARATOR . $path
+            $this->getPluginPath() . DIRECTORY_SEPARATOR . $path
         );
     }
 
@@ -62,11 +64,11 @@ abstract class Slab
     {
         $this->app->router->group(
             [
-                'namespace' => $this->getSlabControllerNamespace(),
+                'namespace' => $this->getPluginControllerNamespace(),
                 'middleware' => $middleware,
             ],
             function ($app) use ($path) {
-                require $this->getSlabPath() . DIRECTORY_SEPARATOR . $path;
+                require $this->getPluginPath() . DIRECTORY_SEPARATOR . $path;
             }
         );
     }
@@ -76,7 +78,7 @@ abstract class Slab
         $paths = [];
         $this->app->afterResolving('migrator', function ($migrator) use ($paths) {
             foreach ((array)$paths as $path) {
-                $migrator->path($this->getSlabPath() . DIRECTORY_SEPARATOR . $path);
+                $migrator->path($this->getPluginPath() . DIRECTORY_SEPARATOR . $path);
             }
         });
     }
@@ -86,19 +88,19 @@ abstract class Slab
         $this->app->afterResolving('translator', function ($translator) use ($path) {
             $translator->addNameSpace(
                 $translator->getViewNamespace(),
-                $this->getSlabPath() . DIRECTORY_SEPARATOR . $path
+                $this->getPluginPath() . DIRECTORY_SEPARATOR . $path
             );
         });
     }
 
-    public function getSlabPath(): string
+    public function getPluginPath(): string
     {
         $reflector = $this->getReflector();
         $fileName = $reflector->getFileName();
         return dirname($fileName);
     }
 
-    protected function getSlabControllerNamespace(): string
+    protected function getPluginControllerNamespace(): string
     {
         $reflector = $this->getReflector();
         $baseDir = str_replace($reflector->getShortName(), '', $reflector->getName());
@@ -116,5 +118,14 @@ abstract class Slab
     protected function view($view): \Illuminate\View\View
     {
         return view($this->getViewNamespace() . '::' . $view);
+    }
+
+    protected function GUID(): string
+    {
+        if (function_exists('com_create_guid') === true) {
+            return trim(com_create_guid(), '{}');
+        }
+
+        return sprintf('%04X%04X-%04X-%04X-%04X-%04X%04X%04X', mt_rand(0, 65535), mt_rand(0, 65535), mt_rand(0, 65535), mt_rand(16384, 20479), mt_rand(32768, 49151), mt_rand(0, 65535), mt_rand(0, 65535), mt_rand(0, 65535));
     }
 }

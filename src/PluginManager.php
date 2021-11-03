@@ -1,30 +1,32 @@
 <?php
 
-namespace Eden\SlabManager;
+namespace Eden\PlugInManager;
 
+use ReflectionException;
 use Symfony\Component\Finder\Finder;
 
-class SlabManager
+class PluginManager
 {
     private $app;
 
     private static $instance = null;
 
-    protected $slabDirectory;
+    protected $PluginDirectory;
 
-    protected $slabs = [];
+    protected $plugins = [];
 
     protected $classMap = [];
 
-    protected $slabExtender;
+    protected $PluginExtender;
 
     public function __construct($app)
     {
         $this->app = $app;
-        $this->app = $app->path() . DIRECTORY_SEPARATOR . 'Plugins';
-        $this->slabExtender = new Slab($this, $app);
-        $this->bootSlabs();
-        $this->slabExtender->extendAll();
+        $this->PluginDirectory = $app->path() . DIRECTORY_SEPARATOR . 'Plugins';
+
+        $this->PluginExtender = new PluginExtender($this, $app);
+        $this->bootPlugins();
+        $this->PluginExtender->extendAll();
         $this->registerClassLoader();
     }
 
@@ -34,7 +36,7 @@ class SlabManager
     }
 
 
-    public static function getInstance($app): ?SlabManager
+    public static function getInstance($app): ?PluginManager
     {
         if (is_null(self::$instance)) {
             self::$instance = new self($app);
@@ -42,36 +44,39 @@ class SlabManager
 
         return self::$instance;
     }
-    protected function bootSlabs()
+
+    protected function bootPlugins()
     {
-        foreach (Finder::create()->in($this->slabDirectory)->directories()->depth(0) as $dir) {
+        foreach (Finder::create()->in($this->PluginDirectory)->directories()->depth(0) as $dir) {
             $directoryName = $dir->getBasename();
-            $slabClass = $this->getSlabClassNameFromDirectory($directoryName);
-            if (!class_exists($slabClass)) {
+            $pluginClass = $this->getPluginClassNameFromDirectory($directoryName);
+
+            if (!class_exists($pluginClass)) {
                 dd('Plugin ' . $directoryName . ' needs a ' . $directoryName . ' Plugin class');
             }
 
             try {
-                $slab = $this->app->makeWith($slabClass, [$this->app]);
-            }
-            catch (\ReflectionException $error) {
+
+                $Plugin = $this->app->makeWith($pluginClass, [$this->app]);
+            } catch (ReflectionException $error) {
                 dd('Plugin ' . $directoryName . ' could not be booted: "' . $error->getMessage() . '"');
             }
 
-            if (!$slab instanceof Slab) {
-                dd('Plugin ' . $directoryName . ' must extends the Slab Base Class');
+            if (!$Plugin instanceof Plugin) {
+                dd('Plugin ' . $directoryName . ' must extends the Plugin Base Class');
             }
 
-            $slab->boot();
+            $Plugin->boot();
 
-            $this->slabs[$slab->name] = $slab;
+            $this->plugins[$Plugin->name] = $Plugin;
 
         }
     }
 
-    function getSlabClassNameFromDirectory($directory): string
+    function getPluginClassNameFromDirectory($directory): string
     {
-        return "App\\Slabs\\${directory}\\${directory}Slab";
+
+        return "App\\Plugins\\${directory}\\${directory}";
     }
 
     /**
@@ -86,7 +91,7 @@ class SlabManager
      * @param $classMap
      * @return $this
      */
-    public function setClassMap($classMap): SlabManager
+    public function setClassMap($classMap): PluginManager
     {
         $this->classMap = $classMap;
 
@@ -105,16 +110,16 @@ class SlabManager
     /**
      * @return array
      */
-    public function getSlabs(): array
+    public function getPlugins(): array
     {
-        return $this->slabs;
+        return $this->plugins;
     }
 
     /**
      * @return string
      */
-    public function getSlabDirectory(): string
+    public function getPluginDirectory(): string
     {
-        return $this->slabDirectory;
+        return $this->PluginDirectory;
     }
 }
