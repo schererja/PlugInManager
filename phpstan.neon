@@ -1,0 +1,21 @@
+includes:
+    - ./vendor/nunomaduro/larastan/extension.neon
+
+parameters:
+
+    paths:
+        - app
+
+    # The level 8 is the highest level
+    level: 9
+    bootstrapFiles:
+        - src/classAliases.php
+
+    ignoreErrors:
+        - "#Cannot access offset 'files' on [a-zA-Z0-9_]+#"
+        - "#Cannot access offset 'view' on [a-zA-Z0-9_]+#"
+
+    excludePaths:
+        - ./*/*/FileToBeExcluded.php
+
+    checkMissingIterableValueType: false

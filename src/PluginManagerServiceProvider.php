@@ -2,6 +2,7 @@
 
 namespace Eden\PlugInManager;
 
+use Illuminate\Foundation\AliasLoader;
 use Illuminate\Support\ServiceProvider;
 
 class PluginManagerServiceProvider extends ServiceProvider
@@ -9,7 +10,7 @@ class PluginManagerServiceProvider extends ServiceProvider
     /**
      * Bootstrap the application services.
      */
-    public function boot()
+    public function boot() : void
     {
         PluginManager::getInstance($this->app);
         /*
@@ -58,5 +59,8 @@ class PluginManagerServiceProvider extends ServiceProvider
         $this->app->singleton('plugin-manager', function ($app) {
             return PluginManager::getInstance($app);
         });
+        $loader = AliasLoader::getInstance();
+
+        $loader->alias('PlugInManager', 'Eden\PlugInManager\PluginManagerFacade::class');
     }
 }

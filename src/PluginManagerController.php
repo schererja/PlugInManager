@@ -6,17 +6,29 @@ use App\Http\Controllers\Controller;
 
 class PluginManagerController extends Controller
 {
+    protected PluginManager $pluginManager;
 
-
-    public function GetPlugins()
+    public function __construct(PluginManager $pluginManager)
     {
-        return PluginManager::getPlugins();
+        $this->pluginManager = $pluginManager;
     }
 
-    public function GetPluginById($id)
-    {
-        $plugins = PluginManager::getPlugins();
 
+    public function GetPlugins(): array
+    {
+        return $this->pluginManager->getPlugins();
+    }
+
+    public function GetPluginById(string $id): mixed
+    {
+        $plugins = $this->pluginManager->getPlugins();
+        $pluginFound = null;
+        foreach ($plugins as $plugin) {
+            if ($plugin->id == $id) {
+                $pluginFound = $plugin;
+            }
+        }
+        return $pluginFound;
 
     }
 }
