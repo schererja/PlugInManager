@@ -1,8 +1,5 @@
 # Very short description of the package
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/eden/slab-manager.svg?style=flat-square)](https://packagist.org/packages/eden/slab-manager)
-[![Total Downloads](https://img.shields.io/packagist/dt/eden/slab-manager.svg?style=flat-square)](https://packagist.org/packages/eden/slab-manager)
-![GitHub Actions](https://github.com/eden/slab-manager/actions/workflows/main.yml/badge.svg)
 
 This package is used as a plugin style manager for a Laravel project.  This is originally based on
 [Laravel-plugins](https://github.com/oneso/laravel-plugins).
