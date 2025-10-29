@@ -117,7 +117,6 @@ class PluginExtender
 
                 $this->app['files']->put($storagePath, $newFileContent);
                 if (is_string($classNamespace) && is_string($storagePath)) {
-
                     $this->pluginManager->addClassMapping($classNamespace, $storagePath);
                 }
             }
@@ -174,7 +173,6 @@ class PluginExtender
             if (is_string($methodName)) {
                 $originalMethodStartIndex = $this->getIndexForFirstOccurrence($methodName, $fileContentExploded);
                 if (is_int($originalMethodStartIndex)) {
-
                     $originalMethodEndIndex = $this->getIndexForFirstOccurrence('return',
                         array_slice($fileContentExploded,
                             $originalMethodStartIndex,
@@ -187,10 +185,8 @@ class PluginExtender
                         $fileContentAfterReturn = array_slice($fileContentExploded, $originalMethodEndIndex);
                         $fileContentExploded = array_merge($fileContentBeforeReturn, $inner, [''], $fileContentAfterReturn);
                     }
-
                 }
             }
-
         }
     }
 
@@ -304,7 +300,6 @@ class PluginExtender
     {
         $tokens = token_get_all($file);
         foreach ($tokens as $idx => $token) {
-
             if (is_array($token)) {
                 $tokenFound = $tokens[$idx - 1][0];
                 if (is_int($tokenFound)) {
@@ -346,7 +341,6 @@ class PluginExtender
                 continue;
             }
             $files[] = $extensionFilePath;
-
         }
 
         return $files;

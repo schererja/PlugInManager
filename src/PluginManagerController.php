@@ -29,6 +29,5 @@ class PluginManagerController extends Controller
         }
 
         return $pluginFound;
-
     }
 }

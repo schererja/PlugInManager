@@ -3,6 +3,7 @@
 namespace Schererja\PlugInManager;
 
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Contracts\View\Factory;
 use Illuminate\View\View;
 use InvalidArgumentException;
 use ReflectionClass;
@@ -27,7 +28,6 @@ abstract class Plugin
     {
         $this->app = $app;
         $this->checkPluginName();
-
     }
 
     abstract public function boot(): void;
@@ -70,7 +70,6 @@ abstract class Plugin
             foreach ((array) $paths as $path) {
                 $migrator->path($this->getPluginPath().DIRECTORY_SEPARATOR.$path);
             }
-
         });
     }
 
@@ -92,7 +91,7 @@ abstract class Plugin
         return $baseDir.'Http\\Controllers';
     }
 
-    protected function view(string $view): View
+    protected function view(string $view): Factory|View
     {
         $viewNameSpace = $this->getViewNamespace().'::'.$view;
 
