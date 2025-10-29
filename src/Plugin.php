@@ -4,7 +4,7 @@ namespace Schererja\PlugInManager;
 
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory;
-use Illuminate\View\View;
+use Illuminate\Contracts\View\View;
 use InvalidArgumentException;
 use ReflectionClass;
 
@@ -91,7 +91,7 @@ abstract class Plugin
         return $baseDir.'Http\\Controllers';
     }
 
-    protected function view(string $view): Factory|View
+    protected function view(string $view): View
     {
         $viewNameSpace = $this->getViewNamespace().'::'.$view;
 
