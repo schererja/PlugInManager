@@ -1,2 +1,3 @@
 <?php
-    class_alias(Eden\PlugInManager\PluginManagerFacade::class, "PlugInManager");
+
+class_alias(Schererja\PlugInManager\PluginManagerFacade::class, 'PlugInManager');

@@ -1,11 +1,8 @@
 <?php
 
-namespace Eden\PlugInManager;
-
+namespace Schererja\PlugInManager;
 
 use Illuminate\Contracts\Foundation\Application;
-use Illuminate\Routing\Route;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 use InvalidArgumentException;
 use ReflectionClass;
@@ -13,11 +10,17 @@ use ReflectionClass;
 abstract class Plugin
 {
     public int $id;
+
     public string $name;
+
     public string $uuid;
+
     public string $description;
+
     public string $version;
+
     protected Application $app;
+
     private ReflectionClass $reflector;
 
     public function __construct(Application $app)
@@ -36,14 +39,15 @@ abstract class Plugin
         if (is_string($fileName)) {
             return dirname($fileName);
         }
-        return "";
+
+        return '';
     }
 
     protected function enableViews(string $path = 'views'): void
     {
         $this->app['view']->addNamespace(
             $this->getViewNamespace(),
-            $this->getPluginPath() . DIRECTORY_SEPARATOR . $path
+            $this->getPluginPath().DIRECTORY_SEPARATOR.$path
         );
     }
 
@@ -55,7 +59,7 @@ abstract class Plugin
                 'middleware' => $middleware,
             ],
             function ($app) use ($path) {
-                require $this->getPluginPath() . DIRECTORY_SEPARATOR . $path;
+                require $this->getPluginPath().DIRECTORY_SEPARATOR.$path;
             }
         );
     }
@@ -63,10 +67,9 @@ abstract class Plugin
     protected function enableMigrations(string $paths = 'migrations'): void
     {
         $this->app->afterResolving('migrator', function ($migrator) use ($paths) {
-            foreach ((array)$paths as $path) {
-                $migrator->path($this->getPluginPath() . DIRECTORY_SEPARATOR . $path);
+            foreach ((array) $paths as $path) {
+                $migrator->path($this->getPluginPath().DIRECTORY_SEPARATOR.$path);
             }
-
 
         });
     }
@@ -76,7 +79,7 @@ abstract class Plugin
         $this->app->afterResolving('translator', function ($translator) use ($path) {
             $translator->addNameSpace(
                 $translator->getViewNamespace(),
-                $this->getPluginPath() . DIRECTORY_SEPARATOR . $path
+                $this->getPluginPath().DIRECTORY_SEPARATOR.$path
             );
         });
     }
@@ -85,15 +88,15 @@ abstract class Plugin
     {
         $reflector = $this->getReflector();
         $baseDir = str_replace($reflector->getShortName(), '', $reflector->getName());
-        return $baseDir . 'Http\\Controllers';
+
+        return $baseDir.'Http\\Controllers';
     }
 
     protected function view(string $view): View
     {
-        $viewNameSpace = $this->getViewNamespace() . '::' . $view;
-        if (is_string($viewNameSpace)) {
-            return view($viewNameSpace);
-        }
+        $viewNameSpace = $this->getViewNamespace().'::'.$view;
+
+        return view($viewNameSpace);
     }
 
     protected function GUID(): string
@@ -109,20 +112,25 @@ abstract class Plugin
 
     private function checkPluginName(): void
     {
-        if (!$this->name) {
+        if (! $this->name) {
             throw new InvalidArgumentException('Missing Plugin Name, please verify name exists');
         }
     }
 
     private function getViewNamespace(): string
     {
-        return 'Plugin:' . Str::camel(
-                mb_substr(
-                    get_called_class(),
-                    strpos(get_called_class(), '\\') + 1,
-                    -6
-                )
-            );
+        $config = $this->app->make('config');
+        $prefix = $config->get('plugin-manager.view_namespace_prefix', 'plugin');
+        $suffix = $config->get('plugin-manager.plugin_class_suffix', 'Plugin');
+
+        $className = get_called_class();
+        $pluginName = mb_substr(
+            $className,
+            strrpos($className, '\\') + 1,
+            -strlen($suffix)
+        );
+
+        return $prefix.':'.strtolower($pluginName);
     }
 
     private function getReflector(): ReflectionClass

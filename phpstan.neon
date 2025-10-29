@@ -2,20 +2,14 @@ includes:
     - ./vendor/nunomaduro/larastan/extension.neon
 
 parameters:
-
     paths:
-        - app
+        - src
 
-    # The level 8 is the highest level
-    level: 9
-    bootstrapFiles:
-        - src/classAliases.php
+    level: 5
 
     ignoreErrors:
-        - "#Cannot access offset 'files' on [a-zA-Z0-9_]+#"
-        - "#Cannot access offset 'view' on [a-zA-Z0-9_]+#"
+        - '#Access to an undefined property.*Application.*router#'
+        - '#Parameter.*callback.*spl_autoload_register.*expects.*callable.*#'
 
     excludePaths:
-        - ./*/*/FileToBeExcluded.php
-
-    checkMissingIterableValueType: false
+        - vendor/

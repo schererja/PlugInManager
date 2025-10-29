@@ -1,6 +1,6 @@
 <?php
 
-namespace Eden\PlugInManager;
+namespace Schererja\PlugInManager;
 
 use Illuminate\Contracts\Filesystem\FileNotFoundException;
 use Illuminate\Contracts\Foundation\Application;
@@ -8,7 +8,6 @@ use JetBrains\PhpStorm\Pure;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionMethod;
-use function Composer\Autoload\includeFile;
 
 class PluginExtender
 {
@@ -17,18 +16,28 @@ class PluginExtender
     protected PluginManager $pluginManager;
 
     protected string $classMapCacheFile;
+
     private string $directorySep = DIRECTORY_SEPARATOR;
+
+    private string $storageDirectory;
+
+    private bool $cacheEnabled;
 
     public function __construct(PluginManager $pluginManager, Application $app)
     {
         $this->pluginManager = $pluginManager;
         $this->app = $app;
-        $this->classMapCacheFile = storage_path('plugins/classmap.json');
+
+        $config = $app->make('config');
+        $this->storageDirectory = $config->get('plugin-manager.storage_directory', 'plugins');
+        $this->cacheEnabled = $config->get('plugin-manager.cache_enabled', true);
+
+        $this->classMapCacheFile = $app->storagePath().DIRECTORY_SEPARATOR.$this->storageDirectory.DIRECTORY_SEPARATOR.'classmap.json';
     }
 
     public function extendAll(): void
     {
-        if (!$this->load()) {
+        if (! $this->load()) {
             foreach ($this->pluginManager->getPlugins() as $plugin) {
                 $this->extend($plugin, false);
             }
@@ -41,24 +50,24 @@ class PluginExtender
     {
         foreach ($this->getAllPluginClasses($plugin) as $pluginClassPath) {
             $classNamespace = $this->getClassNamespaceFromFilename($pluginClassPath);
-            if (is_string($classNamespace))
+            if (is_string($classNamespace)) {
                 if ($this->classExists($classNamespace)) {
                     continue;
                 }
+            }
 
             $addMethods = [];
             $beforeReturnMethods = [];
             $constants = [];
             foreach ($this->getExtensionFilesFromFile($pluginClassPath, $plugin) as $file) {
-                includeFile($file);
+                require_once $file;
                 $extendingClassNamespace = $this->getClassNamespaceFromFilename($file);
 
                 $fileContent = $this->app['files']->get($file);
                 try {
-                    if(is_string($extendingClassNamespace)) {
+                    if (is_string($extendingClassNamespace)) {
                         if (class_exists($extendingClassNamespace)) {
                             $reflector = new ReflectionClass($extendingClassNamespace);
-
 
                             $addMethods = array_merge(
                                 $addMethods,
@@ -77,7 +86,8 @@ class PluginExtender
                         }
                     }
                 } catch (ReflectionException $e) {
-                    error_log("Failed while using extend function" . $e);
+                    error_log('Failed while using extend function'.$e);
+
                     return;
                 }
             }
@@ -131,6 +141,7 @@ class PluginExtender
                 return $key;
             }
         }
+
         return false;
     }
 
@@ -155,7 +166,6 @@ class PluginExtender
             } else {
                 return;
             }
-
 
             $inner = array_slice($methodExploded, $innerStart, $innerEnd - $innerStart + 1);
             if (false == $methodName = $this->getMethodNameFromString($method)) {
@@ -203,7 +213,8 @@ class PluginExtender
                 $before = array_slice($fileContentExploded, 0, $lastConstantIndex + 1);
                 $after = array_slice($fileContentExploded, $lastConstantIndex + 1);
             } else {
-                error_log("Unable to do array_slice on file content exploded.");
+                error_log('Unable to do array_slice on file content exploded.');
+
                 return;
             }
             $fileContentExploded = $before;
@@ -212,9 +223,9 @@ class PluginExtender
                 if (is_bool($constantValue)) {
                     $constantValue = $constantValue ? 'true' : 'false';
                 } elseif (is_array($constantValue)) {
-                    $constantValue = '[' . implode(',', $constantValue) . ']';
+                    $constantValue = '['.implode(',', $constantValue).']';
                 }
-                $fileContentExploded[] = '    const ' . $constantName . ' = ' . $constantValue . ';';
+                $fileContentExploded[] = '    const '.$constantName.' = '.$constantValue.';';
             }
 
             $fileContentExploded = array_merge($fileContentExploded, $after);
@@ -229,32 +240,36 @@ class PluginExtender
         foreach ($reflector->getMethods() as $reflectionMethod) {
             $doc = $reflectionMethod->getDocComment();
             if (is_string($doc)) {
-                if (str_contains($doc, '@' . $type)) {
+                if (str_contains($doc, '@'.$type)) {
                     $methods[] = $this->getMethodString($reflectionMethod, $fileContentExploded);
                 }
             }
         }
+
         return $methods;
     }
 
-    #[Pure] protected function collectConstants(ReflectionClass $class): array
+    #[Pure]
+    protected function collectConstants(ReflectionClass $class): array
     {
         return $class->getConstants();
     }
 
-    #[Pure] protected function getMethodString(ReflectionMethod $method, array $splitContent): string
+    #[Pure]
+    protected function getMethodString(ReflectionMethod $method, array $splitContent): string
     {
         $methodString = '';
 
         for ($i = $method->getStartLine(); $i <= $method->getEndLine(); $i++) {
-            $methodString .= $splitContent[$i - 1] . PHP_EOL;
+            $methodString .= $splitContent[$i - 1].PHP_EOL;
         }
+
         return $methodString;
     }
 
     protected function load(): bool
     {
-        if (!env('PLUGIN_CACHE', true)) {
+        if (! $this->cacheEnabled) {
             return false;
         }
 
@@ -264,23 +279,24 @@ class PluginExtender
                 $this->pluginManager->setClassMap($jsonDecoded);
             }
         } catch (FileNotFoundException $error) {
-            error_log($error);
+            error_log($error->getMessage());
+
             return false;
         }
 
         return true;
     }
 
-
     protected function getAllPluginClasses(Plugin $plugin): array
     {
         $files = [];
         foreach ($this->app['files']->allFiles($plugin->getPluginPath()) as $file) {
-            if (!$this->fileContainsClass($file->getContents())) {
+            if (! $this->fileContainsClass($file->getContents())) {
                 continue;
             }
             $files[] = $file->getPathname();
         }
+
         return $files;
     }
 
@@ -298,6 +314,7 @@ class PluginExtender
                 }
             }
         }
+
         return false;
     }
 
@@ -305,6 +322,7 @@ class PluginExtender
     {
         $namespace = str_replace($this->pluginManager->getPluginDirectory(), 'App\plugins', $file);
         $namespace = str_replace('/', '\\', $namespace);
+
         return str_replace('.php', '', $namespace);
     }
 
@@ -316,15 +334,15 @@ class PluginExtender
     protected function getExtensionFilesFromFile(string $file, Plugin $plugin): array
     {
         $files = [];
-        $classPath = str_replace($this->pluginManager->getPluginDirectory(), $this->directorySep . 'plugins', $file);
+        $classPath = str_replace($this->pluginManager->getPluginDirectory(), $this->directorySep.'plugins', $file);
         foreach ($this->pluginManager->getPlugins() as $otherPlugin) {
             if ($plugin->name == $otherPlugin->name) {
                 continue;
             }
 
-            $extensionFilePath = $otherPlugin->getpluginPath() . $classPath;
+            $extensionFilePath = $otherPlugin->getpluginPath().$classPath;
 
-            if (!$this->app['files']->exists($extensionFilePath)) {
+            if (! $this->app['files']->exists($extensionFilePath)) {
                 continue;
             }
             $files[] = $extensionFilePath;
@@ -334,31 +352,29 @@ class PluginExtender
         return $files;
     }
 
-
-    protected function getExtendedClassStoragePath(string $file): string|null
+    protected function getExtendedClassStoragePath(string $file): ?string
     {
         $classNamespace = $this->getClassNamespaceFromFilename($file);
         if ($classNamespace != null) {
             $replacedString = str_replace('\\', '_', $classNamespace);
-            $path = `plugins$this->directorySep$replacedString.php`;
-            return storage_path(
-                $path
-            );
+            $path = $this->storageDirectory.$this->directorySep.$replacedString.'.php';
+
+            return $this->app->storagePath().$this->directorySep.$path;
         }
+
         return null;
     }
 
-    /**
-     * @return mixed
-     */
     protected function writeCache(): mixed
     {
-        if (!file_exists($this->classMapCacheFile)) {
-            mkdir(storage_path('plugins/'));
+        $storageDir = dirname($this->classMapCacheFile);
+        if (! file_exists($this->classMapCacheFile)) {
+            if (! is_dir($storageDir)) {
+                mkdir($storageDir, 0755, true);
+            }
             fopen($this->classMapCacheFile, 'w');
-
         }
-        return $this->app['files']->put($this->classMapCacheFile, json_encode($this->pluginManager->getClassMap()));
 
+        return $this->app['files']->put($this->classMapCacheFile, json_encode($this->pluginManager->getClassMap()));
     }
 }

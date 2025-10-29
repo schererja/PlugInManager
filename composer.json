@@ -1,28 +1,56 @@
 {
-    "name": "eden/plugin-manager",
-    "autoload": {
-        "psr-4": {
-            "Eden\\PlugInManager\\": "src/",
-            "App\\": "../../../../app"
-        }
-    },
-    "extra": {
-        "laravel": {
-            "providers": [
-                "Eden\\PlugInManager\\PluginManagerServiceProvider"
-            ]
-        },
-        "authors": [
-            {
-                "name": "Jason Scherer",
-                "email": "schereja@gmail.com"
-            }
-        ]
-    },
-    "require-dev": {
-        "phpstan/phpstan": "^1.0",
-        "nunomaduro/larastan": "^1.0",
-        "orchestra/testbench": "^6.22",
-        "jetbrains/phpstorm-attributes": "^1.0"
+  "name": "schererja/plugin-manager",
+  "description": "A flexible and configurable plugin management system for Laravel applications",
+  "keywords": [
+    "laravel",
+    "plugin",
+    "manager",
+    "modular",
+    "extensions"
+  ],
+  "license": "Apache-2.0",
+  "type": "library",
+  "autoload": {
+    "psr-4": {
+      "Schererja\\PlugInManager\\": "src/",
+      "App\\": "../../../../app"
     }
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Schererja\\PlugInManager\\PluginManagerServiceProvider"
+      ]
+    },
+    "authors": [
+      {
+        "name": "Jason Scherer",
+        "email": "schereja@gmail.com"
+      }
+    ]
+  },
+  "require-dev": {
+    "phpstan/phpstan": "^1.0",
+    "nunomaduro/larastan": "^1.0",
+    "orchestra/testbench": "^6.22",
+    "jetbrains/phpstorm-attributes": "^1.0",
+    "laravel/pint": "^1.0"
+  },
+  "scripts": {
+    "pint": "./vendor/bin/pint",
+    "pint-test": "./vendor/bin/pint --test",
+    "stan": "./vendor/bin/phpstan analyse",
+    "test": "echo 'No tests configured yet'",
+    "check": [
+      "@pint-test",
+      "@stan"
+    ]
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "preferred-install": "dist",
+    "sort-packages": true
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
 }

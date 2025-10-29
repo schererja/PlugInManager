@@ -1,8 +1,8 @@
 <?php
 
-namespace Eden\PlugInManager;
+namespace Schererja\PlugInManager;
 
-use App\Http\Controllers\Controller;
+use Illuminate\Routing\Controller;
 
 class PluginManagerController extends Controller
 {
@@ -12,7 +12,6 @@ class PluginManagerController extends Controller
     {
         $this->pluginManager = $pluginManager;
     }
-
 
     public function GetPlugins(): array
     {
@@ -28,6 +27,7 @@ class PluginManagerController extends Controller
                 $pluginFound = $plugin;
             }
         }
+
         return $pluginFound;
 
     }

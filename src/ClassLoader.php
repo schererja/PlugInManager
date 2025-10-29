@@ -1,8 +1,6 @@
 <?php
 
-namespace Eden\PlugInManager;
-
-use function Composer\Autoload\includeFile;
+namespace Schererja\PlugInManager;
 
 class ClassLoader
 {
@@ -13,14 +11,14 @@ class ClassLoader
         $this->pluginManager = $pluginManager;
     }
 
-    public function loadClass(string $class) : bool
+    public function loadClass(string $class): bool
     {
         if (isset($this->pluginManager->getClassMap()[$class])) {
-            includeFile($this->pluginManager->getClassMap()[$class]);
+            require_once $this->pluginManager->getClassMap()[$class];
 
             return true;
         }
+
         return false;
     }
-
 }

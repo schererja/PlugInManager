@@ -1,27 +1,42 @@
 <?php
 
-namespace Eden\PlugInManager;
+namespace Schererja\PlugInManager;
 
-use Illuminate\Contracts\Container\BindingResolutionException;
+use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\Finder\Finder;
-use  Illuminate\Contracts\Foundation\Application;
+
 class PluginManager
 {
     private static ?PluginManager $instance = null;
-    protected string $PluginDirectory;
+
+    protected string $pluginDirectory;
+
+    protected string $pluginNamespace;
+
+    protected string $pluginClassSuffix;
+
+    protected string $errorMode;
+
+    protected bool $autoCreateDirectory;
+
     protected array $plugins = [];
+
     protected array $classMap = [];
-    protected PluginExtender $PluginExtender;
+
+    protected PluginExtender $pluginExtender;
+
     private Application $app;
 
     public function __construct(Application $app)
     {
         $this->app = $app;
-        $this->PluginDirectory = $app->path() . DIRECTORY_SEPARATOR . 'Plugins';
+        $this->loadConfiguration();
+        $this->initializePluginDirectory();
 
-        $this->PluginExtender = new PluginExtender($this, $app);
+        $this->pluginExtender = new PluginExtender($this, $app);
         $this->bootPlugins();
-        $this->PluginExtender->extendAll();
+        $this->pluginExtender->extendAll();
         $this->registerClassLoader();
     }
 
@@ -34,9 +49,29 @@ class PluginManager
         return self::$instance;
     }
 
-    function getPluginClassNameFromDirectory(string $directory): string
+    private function loadConfiguration(): void
     {
-        return "App\\Plugins\\$directory\\$directory";
+        $config = $this->app->make('config');
+
+        $pluginDirectory = $config->get('plugin-manager.plugin_directory', 'app/Plugins');
+        $this->pluginDirectory = $this->app->basePath($pluginDirectory);
+
+        $this->pluginNamespace = $config->get('plugin-manager.plugin_namespace', 'App\\Plugins');
+        $this->pluginClassSuffix = $config->get('plugin-manager.plugin_class_suffix', 'Plugin');
+        $this->errorMode = $config->get('plugin-manager.error_mode', 'exception');
+        $this->autoCreateDirectory = $config->get('plugin-manager.auto_create_directory', true);
+    }
+
+    private function initializePluginDirectory(): void
+    {
+        if (! file_exists($this->pluginDirectory) && $this->autoCreateDirectory) {
+            mkdir($this->pluginDirectory, 0755, true);
+        }
+    }
+
+    public function getPluginClassNameFromDirectory(string $directory): string
+    {
+        return $this->pluginNamespace."\\$directory\\$directory".$this->pluginClassSuffix;
     }
 
     public function getClassMap(): array
@@ -51,62 +86,88 @@ class PluginManager
         return $this;
     }
 
-    public function addClassMapping(string $classNamespace, string $storagePath) : void
+    public function addClassMapping(string $classNamespace, string $storagePath): void
     {
-        if(is_array($this->classMap)) {
+        if (is_array($this->classMap)) {
             $this->classMap[$classNamespace] = $storagePath;
         }
     }
 
-    /**
-     * @return array
-     */
     public function getPlugins(): array
     {
         return $this->plugins;
     }
 
-    /**
-     * @return string
-     */
     public function getPluginDirectory(): string
     {
-        return $this->PluginDirectory;
+        return $this->pluginDirectory;
     }
 
-    protected function bootPlugins() : void
+    public function getPluginNamespace(): string
     {
-        if (!file_exists($this->PluginDirectory)) {
-            mkdir($this->PluginDirectory);
+        return $this->pluginNamespace;
+    }
+
+    public function getPluginClassSuffix(): string
+    {
+        return $this->pluginClassSuffix;
+    }
+
+    protected function bootPlugins(): void
+    {
+        if (! file_exists($this->pluginDirectory)) {
+            return;
         }
+
         $id = 1;
-        foreach (Finder::create()->in($this->PluginDirectory)->directories()->depth(0) as $dir) {
+        foreach (Finder::create()->in($this->pluginDirectory)->directories()->depth(0) as $dir) {
             $directoryName = $dir->getBasename();
             $pluginClass = $this->getPluginClassNameFromDirectory($directoryName);
 
-            if (!class_exists($pluginClass)) {
-                dd('Plugin ' . $directoryName . ' needs a ' . $directoryName . ' Plugin class');
+            if (! class_exists($pluginClass)) {
+                $this->handleError("Plugin '$directoryName' needs a '$directoryName{$this->pluginClassSuffix}' class");
+
+                continue;
             }
 
             try {
-                $Plugin = $this->app->makeWith($pluginClass, [$this->app]);
-            } catch (BindingResolutionException $error) {
-                dd('Plugin ' . $directoryName . ' could not be booted: "' . $error->getMessage() . '"');
+                $Plugin = new $pluginClass($this->app);
+            } catch (\Exception $error) {
+                $this->handleError("Plugin '$directoryName' could not be booted: \"{$error->getMessage()}\"");
+
+                continue;
             }
 
-            if (!$Plugin instanceof Plugin) {
-                dd('Plugin ' . $directoryName . ' must extends the Plugin Base Class');
+            if (! $Plugin instanceof Plugin) {
+                $this->handleError("Plugin '$directoryName' must extend the Plugin base class");
+
+                continue;
             }
 
             $Plugin->boot();
             $Plugin->id = $id;
             $id++;
             $this->plugins[$Plugin->name] = $Plugin;
-
         }
     }
 
-    private function registerClassLoader() : void
+    private function handleError(string $message): void
+    {
+        switch ($this->errorMode) {
+            case 'exception':
+                throw new \RuntimeException($message);
+            case 'log':
+                Log::error("PluginManager: $message");
+                break;
+            case 'silent':
+                // Do nothing
+                break;
+            default:
+                throw new \RuntimeException($message);
+        }
+    }
+
+    private function registerClassLoader(): void
     {
         spl_autoload_register([new ClassLoader($this), 'loadClass'], true, true);
     }
